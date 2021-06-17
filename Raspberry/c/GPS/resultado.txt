@@ -1,0 +1,68 @@
+Presetup
+power
+preanswer
+AT
+OK
+Sin while
+Power hecho
+Start GPS session...
+AT+CGPS=1
+OK
+Postsetup
+iteracion
+AT+CGPSINFO
++CGPSINFO: 
+4023.396537,N,00337.698853,W,280521,173330.10,674.2,0.0,277.8
+
+OK
+Latitude is 40.389942 N
+Longitude is 3.628314 W
+Day Month Year is 280521
+UTC time is 173330
+Resultado es 40.389942, -3.628314
+---------------------------
+iteracion
+AT+CGPSINFO
++CGPSINFO: 
+4023.471932,N,00337.831207,W,280521,173341.0,1015.7,0.0,265.1
+
+OK
+Latitude is 40.391197 N
+Longitude is 3.630520 W
+Day Month Year is 280521
+UTC time is 173341
+Resultado es 40.391197, -3.630520
+---------------------------
+iteracion
+AT+CGPSINFO
++CGPSINFO: 
+4
+Latitude is 4.391199 N
+Longitude is 3.630520 W
+Day Month Year is 280521
+UTC time is 173341
+Resultado es 4.391199, -3.630520
+---------------------------
+iteracion
+AT+CGPSINFO
++CGPSINFO: 
+40
+Latitude is 40.000000 N
+Longitude is 3.630520 W
+Day Month Year is 280521
+UTC time is 173341
+Resultado es 40.000000, -3.630520
+---------------------------
+iteracion
+AT+CGPSINFO
++CGPSINFO: 
+402
+Latitude is 40.033333 N
+Longitude is 3.630520 W
+Day Month Year is 280521
+UTC time is 173341
+Resultado es 40.033333, -3.630520
+---------------------------
+AT+CGPS=0
+OK
+
