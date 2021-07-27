@@ -26,8 +26,10 @@
 */
 #include <iostream>
 #include <string>
-#include "sim7x00.h"
+
 #include "arduPi.h"
+#include "sim7x00.h"
+
 
 Sim7x00::Sim7x00(){
 }
@@ -73,28 +75,23 @@ void Sim7x00::PowerOn(int PowerKey = powerkey)
         delay(500);
 }
 
+/**************************Custom function: Power on Sim7x00 without sim**************************/
+
 void Sim7x00::PowerOnWithoutSIM(int PowerKey = powerkey)
 {
-    printf("power\n");
     uint8_t answer = 0;
 
     Serial.begin(115200);
 
     // checks if the module is started
-    printf("preanswer\n");
     answer = sendATcommand("AT", "OK", 2000);
     if (answer == 0)
     {
-        printf("Starting up...\n");
-
-        
         pinMode(PowerKey, OUTPUT);
         // power on pulse
         digitalWrite(PowerKey, HIGH);
         delay(600);
         digitalWrite(PowerKey, LOW);
-        
-        printf("wait\n");
         
         // waits for an answer from the module
         while (answer == 0) {     // Send AT every two seconds and wait for the answer
@@ -104,11 +101,6 @@ void Sim7x00::PowerOnWithoutSIM(int PowerKey = powerkey)
     }
 
     delay(5000);
-    
-    //Removed SIM comprobations
-
-    //while ((sendATcommand("AT+CREG?", "+CREG: 0,1", 500) || sendATcommand("AT+CREG?", "+CREG: 0,5", 500)) == 0)
-    //  delay(500);
 }
 
 /**************************Phone Calls**************************/
@@ -347,15 +339,19 @@ bool Sim7x00::GPSPositioning(){
     return true;
 }
 
+/**************************Custom function: Init GPS Session**************************/
+
 bool Sim7x00::GPSInitSession()
 {
     printf("Start GPS session...\n");
-    sendATcommand("AT+CGPS=1", "OK:", 1000);    // start GPS session, standalone mode
+    sendATcommandSilent("AT+CGPS=1", "OK:", 1000);    // start GPS session, standalone mode
 
     delay(2000);
     return true;
     
 }
+
+/**************************Custom function: Read GPS data without opening sesion**************************/
 
 std::string Sim7x00::GPSReadWithOpenedSession()
 {
@@ -368,35 +364,33 @@ std::string Sim7x00::GPSReadWithOpenedSession()
     float Lat,Log;
     std::string sLat, sLog, sresult;
 
-
     while(RecNull)
     {
-        answer = sendATcommand("AT+CGPSINFO", "+CGPSINFO: ", 1000);    // start GPS session, standalone mode
+        answer = sendATcommandSilent("AT+CGPSINFO", "+CGPSINFO: ", 1000);    // start GPS session, standalone mode
 
         if (answer == 1)
         {
             answer = 0;
             while(Serial.available() == 0);
             // this loop reads the data of the SMS
-            do{
+            do
+            {
                 // if there are data in the UART input buffer, reads it and checks for the asnwer
-                if(Serial.available() > 0){    
+                if(Serial.available() > 0)
+                {
                     RecMessage[i] = Serial.read();
                     i++;
                     // check if the desired answer (OK) is in the response of the module
-                    if (strstr(RecMessage, "OK") != NULL)    
-                    {
+                    if (strstr(RecMessage, "OK") != NULL)
                         answer = 1;
-                    }
                 }
             }while(answer == 0);    // Waits for the asnwer with time out
-            
+
             RecMessage[i] = '\0';
-            
-            printf("%s\n",RecMessage); 
 
+            printf("%s\n",RecMessage);
 
-            if (strstr(RecMessage, ",,,,,,,,") != NULL) 
+            if (strstr(RecMessage, ",,,,,,,,") != NULL)
             {
                 memset(RecMessage, '\0', i);    // Initialize the string
                 RecNull = true;
@@ -405,77 +399,311 @@ std::string Sim7x00::GPSReadWithOpenedSession()
                 delay(1000);
             }
             else
-            {
                 RecNull = false;
-            } 
-              
-            
         }
         else
         {
             printf("error %o\n",answer);
-            //we dont close session in this function
-            //sendATcommand("AT+CGPS=0", "OK:", 1000);
+            return "";
+        }
+        delay(1500);
+    }
+
+    if(!RecNull)
+    {
+        strncpy(LatDD,RecMessage,2);
+        strncpy(LatMM,RecMessage+2,9);
+        Lat = atoi(LatDD) + (atof(LatMM)/60);
+
+        if(RecMessage[12] == 'N')
+            sLat = std::to_string(Lat);
+        else if(RecMessage[12] == 'S')
+            sLat = std::to_string(0-Lat);
+
+        strncpy(LogDD,RecMessage+14,3);
+        strncpy(LogMM,RecMessage+17,9);
+        Log = atoi(LogDD) + (atof(LogMM)/60);
+        sLog = std::to_string(Log);
+        if(RecMessage[27] == 'E')
+            sLog = std::to_string(Log);
+        else if(RecMessage[27] == 'W')
+            sLog = std::to_string(0-Log);
+
+        sresult = sLat + ", " + sLog;
+    }
+    else
+	    sresult = "";
+    
+    return sresult;
+}
+
+/**************************Custom function: Read GPS data opening sesion**************************/
+
+std::string Sim7x00::GPSReadWithoutSession()
+{
+    uint8_t answer = 0;
+    bool RecNull = true;
+    int i = 0;
+    char RecMessage[200];
+    char LatDD[2],LatMM[9],LogDD[3],LogMM[9],DdMmYy[6] ,UTCTime[6];
+    int DayMonthYear;
+    float Lat,Log;
+    std::string sLat, sLog, sresult;
+
+    sendATcommandSilent("AT+CGPS=1,1", "OK:", 1000);    // start GPS session, standalone mode
+
+    while(RecNull)
+    {
+        answer = sendATcommandSilent("AT+CGPSINFO", "+CGPSINFO: ", 1000);    // start GPS session, standalone mode
+
+        if (answer == 1)
+        {
+            answer = 0;
+            while(Serial.available() == 0);
+            // this loop reads the data of the SMS
+            do
+            {
+                // if there are data in the UART input buffer, reads it and checks for the asnwer
+                if(Serial.available() > 0)
+                {
+                    RecMessage[i] = Serial.read();
+                    i++;
+                    // check if the desired answer (OK) is in the response of the module
+                    if (strstr(RecMessage, "OK") != NULL)
+                        answer = 1;
+                }
+            }while(answer == 0);    // Waits for the asnwer with time out
+
+            RecMessage[i] = '\0';
+
+            printf("%s\n",RecMessage);
+
+            if (strstr(RecMessage, ",,,,,,,,") != NULL)
+            {
+                memset(RecMessage, '\0', i);    // Initialize the string
+                RecNull = true;
+                i = 0;
+                answer = 0;
+                delay(1000);
+            }
+            else
+                RecNull = false;
+
+        }
+        else
+        {
+            printf("error %o\n",answer);
+            sendATcommandSilent("AT+CGPS=0", "OK:", 1000);
             return nullptr;
         }
         delay(1500);
 
     }
 
-    strncpy(LatDD,RecMessage,2);
-    strncpy(LatMM,RecMessage+2,9);
-    Lat = atoi(LatDD) + (atof(LatMM)/60);
-    
-    if(RecMessage[12] == 'N')
+    if(!RecNull)
     {
-	    printf("Latitude is %f N\n",Lat);
-	    sLat = std::to_string(Lat);
-	}
-    else if(RecMessage[12] == 'S')
-    {
-	    printf("Latitude is %f S\n",Lat);
-	    sLat = std::to_string(0-Lat);
-	}
+        strncpy(LatDD,RecMessage,2);
+        strncpy(LatMM,RecMessage+2,9);
+        Lat = atoi(LatDD) + (atof(LatMM)/60);
+
+        if(RecMessage[12] == 'N')
+            sLat = std::to_string(Lat);
+        else if(RecMessage[12] == 'S')
+            sLat = std::to_string(0-Lat);
+
+        strncpy(LogDD,RecMessage+14,3);
+        strncpy(LogMM,RecMessage+17,9);
+        Log = atoi(LogDD) + (atof(LogMM)/60);
+        sLog = std::to_string(Log);
+        if(RecMessage[27] == 'E')
+            sLog = std::to_string(Log);
+        else if(RecMessage[27] == 'W')
+            sLog = std::to_string(0-Log);
+
+        sresult = sLat + ", " + sLog;
+    }
     else
-        return nullptr;
-
-    strncpy(LogDD,RecMessage+14,3);
-    strncpy(LogMM,RecMessage+17,9);
-    Log = atoi(LogDD) + (atof(LogMM)/60);
-    sLog = std::to_string(Log);
-    if(RecMessage[27] == 'E')
-    {
-	    printf("Longitude is %f E\n",Log);
-	    sLog = std::to_string(Log);
-	}
-    else if(RecMessage[27] == 'W')
-    {
-	    printf("Longitude is %f W\n",Log);
-	    sLog = std::to_string(0-Log);
-	}
-    else
-        return nullptr;
-
-    strncpy(DdMmYy,RecMessage+29,6);
-    DdMmYy[6] = '\0';
-    printf("Day Month Year is %s\n",DdMmYy);
-
-    strncpy(UTCTime,RecMessage+36,6);
-    UTCTime[6] = '\0';
-    printf("UTC time is %s\n",UTCTime);
+	    sresult = "";
     
-    sresult = sLat + ", " + sLog;
+    sendATcommandSilent("AT+CGPS=0", "OK:", 1000);    // finish GPS
     
-    std::cout << "Resultado es " << sresult << std::endl;
-    std::cout << "---------------------------" << std::endl;
-
-	return sresult;
+    return sresult;
 }
+
+
+/**************************Custom function: Close GPS session **************************/
 
 bool Sim7x00::GPSCloseSession()
 {
-    sendATcommand("AT+CGPS=0", "OK:", 1000);
+    sendATcommandSilent("AT+CGPS=0", "OK:", 1000);
     return true;
+}
+
+/**************************Custom function: Read GPS data without opening sesion with one intent **************************/
+std::string GPSReadOneWithOpenedSession()
+{
+    uint8_t answer = 0;
+    bool RecNull = true;
+    int i = 0;
+    char RecMessage[200];
+    char LatDD[2],LatMM[9],LogDD[3],LogMM[9],DdMmYy[6] ,UTCTime[6];
+    int DayMonthYear;
+    float Lat,Log;
+    std::string sLat, sLog, sresult;
+
+    answer = sendATcommandSilent("AT+CGPSINFO", "+CGPSINFO: ", 1000);    // start GPS session, standalone mode
+
+    if (answer == 1)
+    {
+        answer = 0;
+        while(Serial.available() == 0);
+        // this loop reads the data of the SMS
+        do{
+            // if there are data in the UART input buffer, reads it and checks for the asnwer
+            if(Serial.available() > 0)
+            {
+                RecMessage[i] = Serial.read();
+                i++;
+                // check if the desired answer (OK) is in the response of the module
+                if (strstr(RecMessage, "OK") != NULL)
+                {
+                    answer = 1;
+                }
+            }
+        }while(answer == 0);    // Waits for the asnwer with time out
+
+        RecMessage[i] = '\0';
+
+        printf("%s\n",RecMessage);
+
+
+        if (strstr(RecMessage, ",,,,,,,,") != NULL)
+        {
+            memset(RecMessage, '\0', i);    // Initialize the string
+            RecNull = true;
+            i = 0;
+            answer = 0;
+            delay(1000);
+        }
+        else
+        {
+            RecNull = false;
+        }
+    }
+    delay(1500);
+
+    if(!RecNull)
+    {
+
+        strncpy(LatDD,RecMessage,2);
+        strncpy(LatMM,RecMessage+2,9);
+        Lat = atoi(LatDD) + (atof(LatMM)/60);
+
+        if(RecMessage[12] == 'N')
+            sLat = std::to_string(Lat);
+        else if(RecMessage[12] == 'S')
+            sLat = std::to_string(0-Lat);
+
+        strncpy(LogDD,RecMessage+14,3);
+        strncpy(LogMM,RecMessage+17,9);
+        Log = atoi(LogDD) + (atof(LogMM)/60);
+        sLog = std::to_string(Log);
+        if(RecMessage[27] == 'E')
+            sLog = std::to_string(Log);
+        else if(RecMessage[27] == 'W')
+            sLog = std::to_string(0-Log);
+
+        sresult = sLat + ", " + sLog;
+    }
+    else
+        sresult = "";
+
+    return sresult;
+}
+/**************************Custom function: Read GPS data opening sesion with one intent **************************/
+std::string GPSReadOneWithoutSession()
+{
+    uint8_t answer = 0;
+    bool RecNull = true;
+    int i = 0;
+    char RecMessage[200];
+    char LatDD[2],LatMM[9],LogDD[3],LogMM[9],DdMmYy[6] ,UTCTime[6];
+    int DayMonthYear;
+    float Lat,Log;
+    std::string sLat, sLog, sresult;
+
+    sendATcommandSilent("AT+CGPS=1,1", "OK:", 1000);    // start GPS session, standalone mode
+
+    answer = sendATcommandSilent("AT+CGPSINFO", "+CGPSINFO: ", 1000);    // start GPS session, standalone mode
+
+    if (answer == 1)
+    {
+        answer = 0;
+        while(Serial.available() == 0);
+        // this loop reads the data of the SMS
+        do{
+            // if there are data in the UART input buffer, reads it and checks for the asnwer
+            if(Serial.available() > 0)
+            {
+                RecMessage[i] = Serial.read();
+                i++;
+                // check if the desired answer (OK) is in the response of the module
+                if (strstr(RecMessage, "OK") != NULL)
+                {
+                    answer = 1;
+                }
+            }
+        }while(answer == 0);    // Waits for the asnwer with time out
+
+        RecMessage[i] = '\0';
+
+        printf("%s\n",RecMessage);
+
+
+        if (strstr(RecMessage, ",,,,,,,,") != NULL)
+        {
+            memset(RecMessage, '\0', i);    // Initialize the string
+            RecNull = true;
+            i = 0;
+            answer = 0;
+            delay(1000);
+        }
+        else
+        {
+            RecNull = false;
+        }
+    }
+    delay(1500);
+
+    if(!RecNull)
+    {
+
+        strncpy(LatDD,RecMessage,2);
+        strncpy(LatMM,RecMessage+2,9);
+        Lat = atoi(LatDD) + (atof(LatMM)/60);
+
+        if(RecMessage[12] == 'N')
+            sLat = std::to_string(Lat);
+        else if(RecMessage[12] == 'S')
+            sLat = std::to_string(0-Lat);
+
+        strncpy(LogDD,RecMessage+14,3);
+        strncpy(LogMM,RecMessage+17,9);
+        Log = atoi(LogDD) + (atof(LogMM)/60);
+        sLog = std::to_string(Log);
+        if(RecMessage[27] == 'E')
+            sLog = std::to_string(Log);
+        else if(RecMessage[27] == 'W')
+            sLog = std::to_string(0-Log);
+
+        sresult = sLat + ", " + sLog;
+    }
+    else
+        sresult = "";
+
+    sendATcommandSilent("AT+CGPS=0", "OK:", 1000);    // finish GPS
+
+    return sresult;
 }
 
 /**************************Other functions**************************/
@@ -546,6 +774,74 @@ char Sim7x00::sendATcommand(const char* ATcommand, const char* expected_answer, 
 	return answer;
 }
 
+/**************************Custom function: Send AT Command without unnecessary prints **************************/
+
+char Sim7x00::sendATcommandSilent(const char* ATcommand, unsigned int timeout) 
+{
+    uint8_t x = 0, answer = 0;
+    char response[100];
+    unsigned long previous;
+    memset(response, '\0', 100);    // Initialize the string
+
+    delay(100);
+
+    while (Serial.available() > 0) Serial.read();    // Clean the input buffer
+
+    Serial.println(ATcommand);    // Send the AT command 
+
+    previous = millis();
+
+    // this loop waits for the answer
+    do 
+    {
+        // if there are data in the UART input buffer, reads it and checks for the asnwer
+        if (Serial.available() != 0)
+        {
+            response[x] = Serial.read();
+            x++;
+        }
+	    
+    } while ((answer == 0) && ((millis() - previous) < timeout));
+
+    return answer;
+}
+
+char Sim7x00::sendATcommandSilent(const char* ATcommand, const char* expected_answer, unsigned int timeout) 
+{
+    char x = 0, answer = 0;
+    char response[100];
+    unsigned long previous;
+
+    memset(response, '\0', 100);    // Initialize the string
+
+    delay(100);
+
+    while (Serial.available() > 0) Serial.read();    // Clean the input buffer
+
+    Serial.println(ATcommand);    // Send the AT command 
+
+    x = 0;
+    previous = millis();
+
+    // this loop waits for the answer
+    do 
+    {
+        if (Serial.available() != 0)
+        {
+            // if there are data in the UART input buffer, reads it and checks for the asnwer
+            response[x] = Serial.read();
+            x++;
+            // check if the desired answer  is in the response of the module
+            if (strstr(response, expected_answer) != NULL)
+                answer = 1;
+        }
+    }
+    // Waits for the asnwer with time out
+    while ((answer == 0) && ((millis() - previous) < timeout));
+
+    return answer;
+}
+
 char Sim7x00::sendATcommand2(const char* ATcommand, const char* expected_answer1, const char* expected_answer2, unsigned int timeout){
 	uint8_t x=0,  answer=0;
     char response[100];
@@ -563,9 +859,11 @@ char Sim7x00::sendATcommand2(const char* ATcommand, const char* expected_answer1
     previous = millis();
 
     // this loop waits for the answer
-    do{
+    do
+    {
         // if there are data in the UART input buffer, reads it and checks for the asnwer
-        if(Serial.available() != 0){    
+        if(Serial.available() != 0)
+        {
             response[x] = Serial.read();
             printf("%c",response[x]);
             x++;
@@ -591,4 +889,3 @@ char Sim7x00::sendATcommand2(const char* ATcommand, const char* expected_answer1
 }
 
 Sim7x00 sim7600 = Sim7x00();
-
