@@ -5,11 +5,11 @@
 
 ## Table of Contents
 
-- [🤔 What is this project?](#what-is-this-project-)
-- [🎯 Key Features](#key-features-)
-- [🚀 Getting Started](#getting started-)
-- [💙 Contributing](#contributing-)
-- [🙏 Credits](#credits-)
+- [🤔 What is this project?](#-what-is-this-project)
+- [🎯 Key Features](#-key-features-only-for-raspberry-pi)
+- [🚀 Getting Started](#-getting-started)
+- [💙 Contributing](#-contributing)
+- [🙏 Credits](#-credits)
 
 ## 🤔 What is this project?
 
@@ -17,20 +17,18 @@ This project is an extension library for the SIM7600X-4G-HAT module, providing u
 
 Currently source code supports Arduino, Jetson Nano, Raspberry Pi and STM32, but Raspberry Pi is the only one that has been extended until the moment.
 
-*SIM7600X 4G HAT* [official demo]([SIM7600X 4G & LTE Cat-1 HAT - Waveshare Wiki](https://www.waveshare.com/wiki/SIM7600X_4G_%26_LTE_Cat-1_HAT#Program)) from Waveshare has been taked as starting point.
+*SIM7600X 4G HAT* [official demo](https://www.waveshare.com/wiki/SIM7600X_4G_%26_LTE_Cat-1_HAT#Program) from Waveshare has been taked as starting point.
 
 ## 🎯 Key Features (only for Raspberry Pi)
 
 * A simple C wrapper to enable devs to use it on C projects, alongside original C++ implementation.
 * Init module function without SIM card, used mainly to use GPS standalone.
-* Functions to use GPS as a reader, either single or multiple reads. This functions collect GPS raw data and parse it into a string of "<latitude>, <longitude>".
+* Functions to use GPS as a reader, either single or multiple reads. This functions collect GPS raw data and parse it into a string of  ``<latitude>, <longitude>``.
   * Both measures are a float number
   * If latitude is positive, means North, and if negative South.
   * If longitude is positive, means East, and if negative West.
 * Support for init and close GPS module.
 * Added support for sending AT commands without traces on stdout.
-
-
 
 ## 🚀 Getting Started
 
@@ -62,4 +60,4 @@ Any contributions you make are **greatly appreciated**, so if you have any idea 
 
 ## 🙏 Credits
 
-This project was originally created by @VicDominguez to use this module in the context of his Final Degree Project, *Smart Driving Assistant*.
+This project was originally created by [@VicDominguez](https://github.com/VicDominguez) to use this module in the context of his Final Degree Project, *Smart Driving Assistant*.
